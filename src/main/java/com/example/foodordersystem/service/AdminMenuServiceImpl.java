@@ -12,7 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
+
 @Service
 public class AdminMenuServiceImpl implements AdminMenuService{
 
@@ -69,11 +69,7 @@ public class AdminMenuServiceImpl implements AdminMenuService{
     }
 @Override
     public List<String> getAllCategories() {
-        List<MenuItem> allItems = menuItemRepository.findAll();
-        return allItems.stream()
-                .map(MenuItem::getCategory)
-                .distinct()
-                .collect(Collectors.toList());
+        return menuItemRepository.findAllCategories();
     }
 @Override
     public List<MenuItem> bulkUpdateAvailability(List<com.example.foodordersystem.controller.AdminMenuController.BulkAvailabilityRequest> requests,
