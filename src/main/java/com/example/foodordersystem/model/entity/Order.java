@@ -10,10 +10,10 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders")
-@Data
 @AllArgsConstructor
 @Getter
 @Setter
+@ToString(exclude = "orderItems")
 public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
