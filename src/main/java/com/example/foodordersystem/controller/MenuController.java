@@ -18,8 +18,12 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 
 @RestController
+<<<<<<< Updated upstream
 @RequestMapping("/api/menu")
 @CrossOrigin(origins = "*")
+=======
+@RequestMapping("/api/v1/menu")
+>>>>>>> Stashed changes
 public class MenuController {
 
     private final MenuServiceImpl menuService;
