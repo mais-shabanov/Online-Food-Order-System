@@ -1,6 +1,9 @@
 package com.example.foodordersystem.service;
 
 import ch.qos.logback.classic.Logger;
+import com.example.foodordersystem.exception.MenuItemNotFoundException;
+import com.example.foodordersystem.exception.OrderNotFoundException;
+import com.example.foodordersystem.exception.UserNotFoundException;
 import com.example.foodordersystem.mapper.OrderMapper;
 import com.example.foodordersystem.model.dto.request.OrderRequest;
 import com.example.foodordersystem.model.dto.response.OrderResponse;
@@ -11,6 +14,7 @@ import com.example.foodordersystem.model.entity.User;
 import com.example.foodordersystem.repository.MenuItemRepository;
 import com.example.foodordersystem.repository.OrderRepository;
 import com.example.foodordersystem.repository.UserRepository;
+import com.example.foodordersystem.util.MessageUtil;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,24 +45,24 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse createOrder(OrderRequest orderRequest, String username) {
         if (orderRequest.getOrderItems() == null || orderRequest.getOrderItems().isEmpty()) {
-            throw new RuntimeException("Order must contain at least one item");
+            throw new RuntimeException(MessageUtil.get("error.order.empty"));
         }
 
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(MessageUtil.get("error.user.not.found")));
 
         Order order = new Order(user);
 
         for (var itemRequest : orderRequest.getOrderItems()) {
             MenuItem menuItem = menuItemRepository.findById(itemRequest.getMenuItemId())
-                    .orElseThrow(() -> new RuntimeException("Menu item not found: " + itemRequest.getMenuItemId()));
+                    .orElseThrow(() -> new MenuItemNotFoundException(MessageUtil.get("error.menu.item.not.found.id", itemRequest.getMenuItemId())));
 
             if (!menuItem.isAvailable()) {
-                throw new RuntimeException("Menu item not available: " + menuItem.getName());
+                throw new RuntimeException(MessageUtil.get("error.menu.item.not.available", menuItem.getName()));
             }
 
             if (itemRequest.getQuantity() <= 0) {
-                throw new RuntimeException("Quantity must be greater than 0 for: " + menuItem.getName());
+                throw new RuntimeException(MessageUtil.get("error.order.quantity.invalid", menuItem.getName()));
             }
 
             OrderItem orderItem = new OrderItem(menuItem, itemRequest.getQuantity());
@@ -73,14 +77,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse getOrderById(Long id, String username) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new OrderNotFoundException(MessageUtil.get("error.order.not.found")));
 
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(MessageUtil.get("error.user.not.found")));
 
-        if (!order.getUser().getId().equals(user.getId()) &&
-                user.getRole() == User.Role.CUSTOMER) {
-            throw new RuntimeException("Access denied");
+        if (!order.getUser().getId().equals(user.getId()) && user.getRole() == User.Role.CUSTOMER) {
+            throw new RuntimeException(MessageUtil.get("error.access.denied"));
         }
 
         return orderMapper.toResponse(order);
@@ -89,7 +92,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderResponse> getUserOrders(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(MessageUtil.get("error.user.not.found")));
 
         return orderMapper.toResponseList(orderRepository.findByUserId(user.getId()));
     }
@@ -97,20 +100,20 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse updateOrderStatus(Long id, String status, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(MessageUtil.get("error.user.not.found")));
 
         if (user.getRole() == User.Role.CUSTOMER) {
-            throw new RuntimeException("Access denied");
+            throw new RuntimeException(MessageUtil.get("error.access.denied"));
         }
 
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new OrderNotFoundException(MessageUtil.get("error.order.not.found")));
 
         try {
             Order.OrderStatus newStatus = Order.OrderStatus.valueOf(status.toUpperCase());
             order.setStatus(newStatus);
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid order status: " + status);
+            throw new RuntimeException(MessageUtil.get("error.order.status.invalid", status));
         }
 
         Order updatedOrder = orderRepository.save(order);
@@ -120,10 +123,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderResponse> getAllOrders(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(MessageUtil.get("error.user.not.found")));
 
         if (user.getRole() == User.Role.CUSTOMER) {
-            throw new RuntimeException("Access denied");
+            throw new RuntimeException(MessageUtil.get("error.access.denied"));
         }
 
         return orderMapper.toResponseList(orderRepository.findAllOrderByOrderDateDesc());
